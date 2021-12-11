@@ -113,8 +113,7 @@ class Spring {
       d0: a.distance(b),
       k: 0.001,
       mass: 1,
-      damping: 0.05,
-      gravity: new vec2(0, 0.1)
+      damping: 0.05
     };
 
     this.first_update = true; // Fun little pop-in animation
@@ -140,7 +139,7 @@ class Spring {
   }
   render(ctx){
     let val = Math.abs(this.from.distance(this.to) - this.props.d0);
-    let color = `rgb(${50}, ${50*val}, ${255-(50*val)})`;
+    let color = `rgb(50, ${50*val}, ${255-(50*val)})`;
 
     this.from.render(ctx, color);
     this.to.render(ctx, color);
@@ -164,15 +163,21 @@ class Body {
     this.springs = [];
     arr.forEach(p1 => {
       arr.forEach(p2 => {
-        if(p1 !== p2) this.springs.push(new Spring(p1, p2));
+        if(p1 !== p2){
+          let hit = false;
+          this.springs.forEach(spr => {
+            if((spr.from === p1 && spr.to === p2) ||
+               (spr.from === p2 && spr.to === p1)) hit = true;
+          });
+          if(!hit) this.springs.push(new Spring(p1, p2));
+        }
       });
     });
 
     this.props = {
       mass: 1,
       volume: 1,
-      k: 0.01,
-      damp: 0.1
+      k: 0.01
     };
     this.props.pressure = this.props.mass * this.props.volume * this.props.k;
 
@@ -181,7 +186,7 @@ class Body {
   update(){
     this.springs.forEach(s => {
       s.update();
-    })
+    });
   }
   render(ctx){
     this.springs.forEach(s => {
@@ -240,6 +245,7 @@ class World {
         p.velocity.y = 0;
         p.acceleration.y = 0;
       }
+      p.update();
     });
   }
 }
@@ -258,6 +264,7 @@ let w = new World(canv, ctx);
 w.add(new Body(3, 10, 10, 10));
 w.add(new Body(4, 10, 25, 25));
 w.add(new Body(5, 10, 40, 40));
+w.add(new Body(8, 10, 10, 40));
 
 w.loop();
 
