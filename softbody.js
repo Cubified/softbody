@@ -77,10 +77,10 @@ class vec2 {
  * POINT HELPER CLASS
  */
 class Point extends vec2 {
-  constructor(x, y) {
+  constructor(x, y, xo, yo) {
     super(x, y);
 
-    this.origin = new vec2(x, y);
+    this.origin = new vec2(x-(xo ?? 0), y-(yo ?? 0));
     this.velocity = new vec2(0, 0);
     this.acceleration = new vec2(0, 0);
   }
@@ -105,15 +105,16 @@ class Point extends vec2 {
  * PHYSICS OBJECTS
  */
 class Spring {
-  constructor(a, b){
+  constructor(a, b, props_arg){
     this.points = [a, b];
     this.from = a;
     this.to = b;
+    let props = props_arg ?? {};
     this.props = {
-      d0: a.distance(b),
-      k: 0.001,
-      mass: 1,
-      damping: 0.05
+      d0: props.d0 ?? a.distance(b),
+      k: props.k ?? 0.001,
+      mass: props.mass ?? 1,
+      damping: props.damping ?? 0.05
     };
 
     this.first_update = true; // Fun little pop-in animation
@@ -152,7 +153,7 @@ class Spring {
   }
 }
 
-class Body {
+class SpringBody {
   constructor(n, r, x, y){
     let arr = [];
     for(let i=0;i<2*Math.PI;i+=(2*Math.PI)/n){
@@ -173,15 +174,6 @@ class Body {
         }
       });
     });
-
-    this.props = {
-      mass: 1,
-      volume: 1,
-      k: 0.01
-    };
-    this.props.pressure = this.props.mass * this.props.volume * this.props.k;
-
-    this.origin = new Point(x, y);
   }
   update(){
     this.springs.forEach(s => {
@@ -192,6 +184,51 @@ class Body {
     this.springs.forEach(s => {
       s.render(ctx);
     });
+  }
+}
+
+class PressureBody {
+  constructor(n, r, x, y){
+    this.props = {
+      mass: 1,
+      volume: 1,
+      k: 0.005
+    };
+    this.props.pressure = this.props.mass * this.props.volume * this.props.k;
+
+    let arr = [];
+    for(let i=0;i<2*Math.PI;i+=(2*Math.PI)/n){
+      arr.push(new Point(x + (r*Math.cos(i)), y + (r*Math.sin(i)), x, y));
+    }
+    this.points = arr;
+
+    this.springs = [];
+    let p1 = arr[0],
+      p2 = arr[1];
+    for(let i=0;i<arr.length;i++){
+      p2 = arr[i+1] ?? arr[0];
+      this.springs.push(new Spring(p1, p2));
+      p1 = p2;
+    }
+
+    this.origin = new Point(x, y);
+  }
+  update(){
+    this.springs.forEach(s => s.update());
+
+    let center = new vec2(
+      this.points.reduce((prev, next) => prev + next.x, 0) / this.points.length,
+      this.points.reduce((prev, next) => prev + next.y, 0) / this.points.length
+    );
+    this.points.forEach(p => {
+      let Fnet = p.sub(center.add(p.origin));
+
+      p.acceleration = Fnet.mult_s(-this.props.pressure);
+      p.update();
+    });
+  }
+  render(ctx){
+    this.springs.forEach(s => s.render(ctx));
   }
 }
 
@@ -261,10 +298,10 @@ ctx.scale(10, 10);
 
 let w = new World(canv, ctx);
 
-w.add(new Body(3, 10, 10, 10));
-w.add(new Body(4, 10, 25, 25));
-w.add(new Body(5, 10, 40, 40));
-w.add(new Body(8, 10, 10, 40));
+w.add(new SpringBody(3, 10, 10, 15));
+w.add(new SpringBody(4, 10, 40, 10));
+w.add(new SpringBody(5, 10, 15, 40));
+w.add(new PressureBody(8, 10, 40, 40));
 
 w.loop();
 

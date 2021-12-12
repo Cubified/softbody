@@ -1,6 +1,6 @@
 ## softbody
 
-A simple spring-mass softbody physics simulation.
+A simple soft body physics simulation, including spring-mass and pressure bodies.
 
 ![demo.png](https://github.com/Cubified/softbody/blob/main/demo.png)
 
